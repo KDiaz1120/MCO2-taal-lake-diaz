@@ -654,90 +654,95 @@ with tab6:
     Meet the talented individuals behind this project:
     """)
     
-    # Team Members in Columns with better spacing
+    # Team Members in Columns
     col1, col2, col3, col4, col5 = st.columns(5)
     
-    # Add vertical space between columns
-    st.markdown("""
-    <style>
-        .team-member {
-            margin-bottom: 2rem;
-        }
-        .team-photo {
-            margin: 1.5rem 0;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    # Helper function to load images
+    def load_image_from_github(url, width=200):
+        try:
+            response = requests.get(url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/'))
+            image = Image.open(BytesIO(response.content))
+            return image
+        except:
+            return None
     
-    # Helper function to display team member cards
-    def display_team_member(col, name, image_url, age, location, role, expertise):
-        with col:
-            st.markdown(f'<div class="team-member">', unsafe_allow_html=True)
-            st.subheader(name)
-            
-            img = load_image_from_github(image_url)
-            if img:
-                st.image(img, width=200)
-            else:
-                st.warning("Image not found")
-            
-            st.markdown(f"""
-            - **Age:** {age}
-            - **Location:** {location}
-            - **Role:** {role}
-            - **Expertise:** {expertise}
-            """)
-            st.markdown('</div>', unsafe_allow_html=True)
+    with col1:
+        st.subheader("Knn Diaz")
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/knn.jpg")
+        if img:
+            st.image(img, width=200)
+        else:
+            st.warning("Image not found")
+        st.markdown("""
+        - **Age:** 22
+        - **Location:** Dasmarinas, Cavite
+        - **Role:** Lead Data Engineer
+        - **Expertise:** Machine Learning, Cloud Architecture
+        """)
     
-    # Team Members
-    display_team_member(
-        col1, "Knn Diaz", 
-        "https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/knn.jpg",
-        "22", "Dasmarinas, Cavite", 
-        "Lead Data Engineer", "Machine Learning, Cloud Architecture"
-    )
+    with col2:
+        st.subheader("Vin Ellaine")
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/vin.jpg")
+        if img:
+            st.image(img, width=200)
+        else:
+            st.warning("Image not found")
+        st.markdown("""
+        - **Age:** 20
+        - **Location:** Tagaytay
+        - **Role:** Backend Developer
+        - **Expertise:** Database Systems, API Development
+        """)
     
-    display_team_member(
-        col2, "Vin Ellaine", 
-        "https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/vin.jpg",
-        "20", "Tagaytay", 
-        "Backend Developer", "Database Systems, API Development"
-    )
+    with col3:
+        st.subheader("Cathreena Paula")
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/cath.jpg")
+        if img:
+            st.image(img, width=200)
+        else:
+            st.warning("Image not found")
+        st.markdown("""
+        - **Age:** 22
+        - **Location:** Nasugbu, Batangas
+        - **Role:** Data Scientist
+        - **Expertise:** Statistical Analysis, Predictive Modeling
+        """)
     
-    display_team_member(
-        col3, "Cathreena Paula", 
-        "https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/cath.jpg",
-        "22", "Nasugbu, Batangas", 
-        "Data Scientist", "Statistical Analysis, Predictive Modeling"
-    )
+    with col4:
+        st.subheader("Sherly Bongalon")
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/she.jfif")
+        if img:
+            st.image(img, width=200)
+        else:
+            st.warning("Image not found")
+        st.markdown("""
+        - **Age:** 22
+        - **Location:** Kawit, Cavite
+        - **Role:** Frontend Developer
+        - **Expertise:** UI/UX Design, Data Visualization
+        """)
     
-    display_team_member(
-        col4, "Sherly Bongalon", 
-        "https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/she.jfif",
-        "22", "Kawit, Cavite", 
-        "Frontend Developer", "UI/UX Design, Data Visualization"
-    )
+    with col5:
+        st.subheader("Mark Jezreel")
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/mark.jfif")
+        if img:
+            st.image(img, width=200)
+        else:
+            st.warning("Image not found")
+        st.markdown("""
+        - **Age:** 21
+        - **Location:** Bacoor, Cavite
+        - **Role:** Full Stack Developer
+        - **Expertise:** System Integration
+        """)
     
-    display_team_member(
-        col5, "Mark Jezreel", 
-        "https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/mark.jfif",
-        "21", "Bacoor, Cavite", 
-        "Full Stack Developer", "System Integration"
-    )
-    
-    # Team Photo with more spacing
-    st.markdown('<div class="team-photo">', unsafe_allow_html=True)
     st.header("Team Photo", divider='blue')
     st.markdown("*Our team during the project development phase*")
-    team_img = load_image_from_github(
-        "https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/teamphoto.jpg", 
-        width=800
-    )
+    team_img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/teamphoto.jpg", width=600)
     if team_img:
         st.image(team_img, caption='Taal Lake Monitoring Team', use_column_width=True)
     else:
         st.info("Team photo will be added soon")
-    st.markdown('</div>', unsafe_allow_html=True)
     
     proj1, proj2, proj3 = st.columns(3)
     
