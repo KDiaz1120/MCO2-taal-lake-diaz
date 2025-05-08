@@ -657,7 +657,7 @@ with tab6:
     # Team Members in Columns
     col1, col2, col3, col4, col5 = st.columns(5)
     
-     with col1:
+    with col1:
         st.subheader("Knn Diaz")
         image_url = "https://raw.githubusercontent.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/491215579_999429189028389_6878600373986600498_n.jpg"  # Replace with actual URL
         try:
