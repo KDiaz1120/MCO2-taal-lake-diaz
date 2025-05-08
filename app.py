@@ -659,7 +659,7 @@ with tab6:
     
     with col1:
         st.subheader("Knn Diaz")
-        image_url = "https://raw.githubusercontent.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/491215579_999429189028389_6878600373986600498_n.jpg"  # Replace with actual URL
+        image_url = "https://raw.githubusercontent.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/knn.jpg"  # Replace with actual URL
         try:
             response = requests.get(image_url)
             image = Image.open(BytesIO(response.content))
