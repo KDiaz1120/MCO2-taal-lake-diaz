@@ -674,8 +674,8 @@ with tab6:
         else:
             st.warning("Image not found")
         st.markdown("""
-        - **Age:** 22
-        - **Location:** Dasmarinas, Cavite
+        - **Age:** 18
+        - **Location:** Toronto, Canada
         - **Role:** Lead Data Engineer
         - **Expertise:** Machine Learning, Cloud Architecture
         """)
