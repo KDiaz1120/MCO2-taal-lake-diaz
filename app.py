@@ -657,14 +657,21 @@ with tab6:
     # Team Members in Columns
     col1, col2, col3, col4, col5 = st.columns(5)
     
+    # Helper function to load images
+    def load_image_from_github(url, width=200):
+        try:
+            response = requests.get(url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/'))
+            image = Image.open(BytesIO(response.content))
+            return image
+        except:
+            return None
+    
     with col1:
         st.subheader("Knn Diaz")
-        image_url = "https://raw.githubusercontent.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/knn.jpg"  # Replace with actual URL
-        try:
-            response = requests.get(image_url)
-            image = Image.open(BytesIO(response.content))
-            st.image(image, width=200)
-        except:
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/knn.jpg")
+        if img:
+            st.image(img, width=200)
+        else:
             st.warning("Image not found")
         st.markdown("""
         - **Age:** 22
@@ -675,10 +682,10 @@ with tab6:
     
     with col2:
         st.subheader("Vin Ellaine")
-        try:
-            image = Image.open(r"C:\Users\AstiAd\Downloads\494334822_1109272744550664_5716762101225003674_n.jpg")
-            st.image(image, width=250)
-        except FileNotFoundError:
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/vin.jpg")
+        if img:
+            st.image(img, width=200)
+        else:
             st.warning("Image not found")
         st.markdown("""
         - **Age:** 20
@@ -689,10 +696,10 @@ with tab6:
     
     with col3:
         st.subheader("Cathreena Paula")
-        try:
-            image = Image.open(r"C:\Users\AstiAd\Downloads\494856243_1194888248790612_2508202690665413990_n.jpg")
-            st.image(image, width=250)
-        except FileNotFoundError:
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/cath.jpg")
+        if img:
+            st.image(img, width=200)
+        else:
             st.warning("Image not found")
         st.markdown("""
         - **Age:** 22
@@ -703,10 +710,10 @@ with tab6:
     
     with col4:
         st.subheader("Sherly Bongalon")
-        try:
-            image = Image.open(r"C:\Users\AstiAd\Downloads\34543e41-e1fc-44bf-ab6f-620586383f01.jfif")
-            st.image(image, width=250)
-        except FileNotFoundError:
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/she.jfif")
+        if img:
+            st.image(img, width=200)
+        else:
             st.warning("Image not found")
         st.markdown("""
         - **Age:** 22
@@ -717,10 +724,10 @@ with tab6:
     
     with col5:
         st.subheader("Mark Jezreel")
-        try:
-            image = Image.open(r"C:\Users\AstiAd\Downloads\6d69508f-d4ff-438b-a874-d3ef191fcf50.jfif")
-            st.image(image, width=250)
-        except FileNotFoundError:
+        img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/mark.jfif")
+        if img:
+            st.image(img, width=200)
+        else:
             st.warning("Image not found")
         st.markdown("""
         - **Age:** 21
@@ -729,14 +736,14 @@ with tab6:
         - **Expertise:** System Integration
         """)
     
-        st.header("Team Photo", divider='blue')
-        st.markdown("*Our team during the project development phase*")
-    try:
-        team_photo = Image.open(r"C:\Users\AstiAd\Downloads\491220585_1001328505402319_368091506214328953_n.jpg")
-        st.image(team_photo, caption='Taal Lake Monitoring Team', use_column_width=True)
-    except:
+    st.header("Team Photo", divider='blue')
+    st.markdown("*Our team during the project development phase*")
+    team_img = load_image_from_github("https://github.com/KDiaz1120/MCO2-taal-lake-diaz/blob/main/teamphoto.jpg", width=600)
+    if team_img:
+        st.image(team_img, caption='Taal Lake Monitoring Team', use_column_width=True)
+    else:
         st.info("Team photo will be added soon")
-    
+        
     proj1, proj2, proj3 = st.columns(3)
     
     with proj1:
