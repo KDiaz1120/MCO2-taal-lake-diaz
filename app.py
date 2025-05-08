@@ -131,7 +131,8 @@ st.markdown("""
 # Load data with caching
 @st.cache_data
 def load_data():
-    return pd.read_csv(r"C:\Users\AstiAd\Downloads\Water Quality-Elective - Final Dataset.csv")
+    url = "https://raw.githubusercontent.com/KDiaz1120/MCO2-taal-lake-diaz/main/Water%20Quality-Elective%20-%20Final%20Dataset.csv"
+    return pd.read_csv(url)
 
 # Initialize session state
 if 'model_trained' not in st.session_state:
@@ -178,7 +179,7 @@ with st.sidebar:
         options=list(parameter_groups.keys()),
         index=0
     )
-
+    
 # Load and preprocess data
 with st.spinner("Loading and preprocessing data..."):
     df = load_data()
