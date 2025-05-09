@@ -398,12 +398,10 @@ with tab4:
         # Define selectable relationships (your original code)
         scatter_options = {
             "Weather Condition vs Nitrate": ("Weather Condition", "Nitrate"),
-            "Weather Condition vs Nitrite": ("Weather Condition", "Nitrite"),
             "Weather Condition vs Ammonia": ("Weather Condition", "Ammonia"),
             "Weather Condition vs Phosphate": ("Weather Condition", "Phosphate"),
             "Weather Condition vs Dissolved Oxygen": ("Weather Condition", "Dissolved Oxyggen"),
             "Wind Direction vs Ammonia": ("Wind Direction", "Ammonia"),
-            "Wind Direction vs Nitrate": ("Wind Direction", "Nitrate"),
             "Wind Direction vs Phosphate": ("Wind Direction", "Phosphate"),
             "Wind Direction vs Nitrite": ("Wind Direction", "Nitrite"),
             "Wind Direction vs Dissolved Oxygen": ("Wind Direction", "Dissolved Oxygen"),
