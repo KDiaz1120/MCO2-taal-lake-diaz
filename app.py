@@ -590,7 +590,7 @@ with tab5:
                 hovermode="x unified",
                 template='plotly_white',
                 height=500,
-                margin=dict(l=50, r=50, t=80, b=50)
+                margin=dict(l=50, r=50, t=80, b=50))
             
             st.plotly_chart(fig, use_container_width=True)
             
