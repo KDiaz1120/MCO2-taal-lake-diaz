@@ -387,40 +387,105 @@ with tab3:
 
 with tab4:
     st.header("Parameter Relationships", divider='blue')
+    
+    # Create two tabs within this section
+    rel_tab1, rel_tab2 = st.tabs(["**Weather  Factors**", "**Volcanic Activity Indicators**"])
+    
+    with rel_tab1:
+        # Define selectable relationships (your original code)
+        scatter_options = {
+            "Weather Condition vs Nitrate": ("Weather Condition", "Nitrate"),
+            "Weather Condition vs Nitrite": ("Weather Condition", "Nitrite"),
+            "Weather Condition vs Ammonia": ("Weather Condition", "Ammonia"),
+            "Weather Condition vs Phosphate": ("Weather Condition", "Phosphate"),
+            "Weather Condition vs Dissolved Oxygen": ("Weather Condition", "Dissolved Oxyggen"),
+            "Wind Direction vs Ammonia": ("Wind Direction", "Ammonia"),
+            "Wind Direction vs Nitrate": ("Wind Direction", "Nitrate"),
+            "Wind Direction vs Phosphate": ("Wind Direction", "Phosphate"),
+            "Wind Direction vs Nitrite": ("Wind Direction", "Nitrite"),
+            "Wind Direction vs Dissolved Oxygen": ("Wind Direction", "Dissolved Oxygen"),
+        }
 
-    # Define selectable relationships
-    scatter_options = {
-        "Weather Condition vs Nitrate": ("Weather Condition", "Nitrate"),
-        "Weather Condition vs Ammonia": ("Weather Condition", "Ammonia"),
-        "Weather Condition vs Phosphate": ("Weather Condition", "Phosphate"),
-        "Wind Direction vs Ammonia": ("Wind Direction", "Ammonia"),
-        "Wind Direction vs Nitrate": ("Wind Direction", "Nitrate"),
-        "Wind Direction vs Phosphate": ("Wind Direction", "Phosphate"),
-        "Wind Direction vs Dissolved Oxygen": ("Wind Direction", "Dissolved Oxygen"),
-    }
-
-    # Select relationship - larger controls
-    selected_relation = st.selectbox(
-        "Select parameter relationship to plot:", 
-        list(scatter_options.keys())
-    )
-
-    x_col, y_col = scatter_options[selected_relation]
-
-    if x_col in df.columns and y_col in df.columns:
-        fig = px.scatter(
-            df,
-            x=x_col,
-            y=y_col,
-            color="Site",
-            title=f"{x_col} vs {y_col}",
-            labels={x_col: x_col, y_col: y_col},
-            template="plotly_white",
-            height=600
+        # Select relationship - larger controls
+        selected_relation = st.selectbox(
+            "Select parameter relationship to plot:", 
+            list(scatter_options.keys())
         )
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning(f"Cannot plot: {x_col} or {y_col} not found in dataset.")
+
+        x_col, y_col = scatter_options[selected_relation]
+
+        if x_col in df.columns and y_col in df.columns:
+            fig = px.scatter(
+                df,
+                x=x_col,
+                y=y_col,
+                color="Site",
+                title=f"{x_col} vs {y_col}",
+                labels={x_col: x_col, y_col: y_col},
+                template="plotly_white",
+                height=600
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning(f"Cannot plot: {x_col} or {y_col} not found in dataset.")
+    
+    with rel_tab2:
+        st.subheader("Volcanic Activity Indicators")
+        st.markdown("Explore relationships between volcanic activity indicators and other parameters")
+        
+        # Volcanic parameters vs other parameters
+        volcanic_options = {
+            "Sulfide": "Sulfide",
+            "Carbon Dioxide": "Carbon Dioxide",
+        }
+        
+        # Create two columns for the selectors
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            volcanic_param = st.selectbox(
+                "Volcanic Parameter:",
+                options=list(volcanic_options.keys()),
+                key="volcanic_param"
+            )
+        
+        with col2:
+            compare_param = st.selectbox(
+                "Compare with:",
+                options=[p for p in df.select_dtypes(include=['float64', 'int64']).columns 
+                         if p not in volcanic_options.values()],
+                key="compare_param"
+            )
+        
+        # Create box plot
+        if volcanic_param and compare_param:
+            try:
+                fig = px.box(
+                    df,
+                    x=volcanic_options[volcanic_param],
+                    y=compare_param,
+                    color="Site",
+                    title=f"{volcanic_param} vs {compare_param}",
+                    labels={
+                        volcanic_options[volcanic_param]: volcanic_param,
+                        compare_param: compare_param
+                    },
+                    template="plotly_white",
+                    height=600
+                )
+                
+                # Add some customization for better visualization
+                fig.update_layout(
+                    boxmode='group',
+                    xaxis_title=volcanic_param,
+                    yaxis_title=compare_param,
+                    showlegend=True
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+            except Exception as e:
+                st.error(f"Error creating plot: {str(e)}")
 
 with tab5:
     st.header("AI-Powered Predictions", divider='blue')
