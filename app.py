@@ -392,6 +392,9 @@ with tab4:
     rel_tab1, rel_tab2 = st.tabs(["**Weather  Factors**", "**Volcanic Activity Indicators**"])
     
     with rel_tab1:
+        st.subheader("Weather Factors")
+        st.markdown("Explore relationships between Weather Factors indicators and other parameters")
+        
         # Define selectable relationships (your original code)
         scatter_options = {
             "Weather Condition vs Nitrate": ("Weather Condition", "Nitrate"),
