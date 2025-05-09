@@ -248,8 +248,69 @@ with tab1:
         st.metric("Parameters Tracked", len(numerical_cols))
         st.metric("Date Range", f"{df['Date'].min().date()} to {df['Date'].max().date()}")
     
-    # Interactive data explorer - larger
-    st.subheader("Data Explorer")
+    # Side-by-side section
+    stats_col, map_col = st.columns(2)
+    
+    with stats_col:
+        st.subheader("Descriptive Statistics", divider='blue')
+        st.dataframe(df[numerical_cols].describe().T.style.format("{:.2f}").background_gradient(cmap='Blues'), 
+                    use_container_width=True,
+                    height=500)
+    
+    with map_col:
+        st.subheader("Taal Lake Monitoring", divider='blue')
+        
+        # Taal Lake coordinates (approximate center)
+        taal_lake_coords = {
+            'latitude': 14.0101,
+            'longitude': 120.9973,
+            'zoom': 10
+        }
+        
+        # Sample monitoring locations (replace with your actual coordinates)
+        monitoring_locations = pd.DataFrame({
+            'lat': [14.0101, 14.015, 14.005, 14.020, 14.000],
+            'lon': [120.9973, 120.992, 121.002, 120.987, 121.007],
+            'name': ['Station 1', 'Station 2', 'Station 3', 'Station 4', 'Station 5']
+        })
+        
+        # PyDeck map (simplified to 2D)
+        try:
+            import pydeck as pdk
+            
+            layer = pdk.Layer(
+                'ScatterplotLayer',
+                data=monitoring_locations,
+                get_position='[lon, lat]',
+                get_color='[200, 30, 0, 160]',
+                get_radius=500,
+                pickable=True
+            )
+            
+            view_state = pdk.ViewState(
+                **taal_lake_coords,
+                pitch=0  # 2D view
+            )
+            
+            r = pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip={
+                    'html': '<b>Station:</b> {name}',
+                    'style': {'color': 'white'}
+                }
+            )
+            
+            st.pydeck_chart(r, use_container_width=True)
+        except ImportError:
+            # Fallback to static map
+            st.map(monitoring_locations,
+                  latitude=taal_lake_coords['latitude'],
+                  longitude=taal_lake_coords['longitude'],
+                  zoom=taal_lake_coords['zoom'])
+    
+    # Interactive data explorer
+    st.subheader("Data Explorer", divider='blue')
     st.dataframe(df.head(100), use_container_width=True, height=400)
 
 with tab2:
