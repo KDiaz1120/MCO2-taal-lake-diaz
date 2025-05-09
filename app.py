@@ -396,7 +396,6 @@ with tab4:
         "Wind Direction vs Ammonia": ("Wind Direction", "Ammonia"),
         "Wind Direction vs Nitrate": ("Wind Direction", "Nitrate"),
         "Wind Direction vs Phosphate": ("Wind Direction", "Phosphate"),
-        "Wind Direction vs Nitrite": ("Wind Direction", "Nitrite"),
         "Wind Direction vs Dissolved Oxygen": ("Wind Direction", "Dissolved Oxygen"),
     }
 
