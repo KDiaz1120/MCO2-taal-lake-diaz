@@ -400,7 +400,7 @@ with tab4:
             "Weather Condition vs Nitrate": ("Weather Condition", "Nitrate"),
             "Weather Condition vs Ammonia": ("Weather Condition", "Ammonia"),
             "Weather Condition vs Phosphate": ("Weather Condition", "Phosphate"),
-            "Weather Condition vs Dissolved Oxygen": ("Weather Condition", "Dissolved Oxyggen"),
+            "Weather Condition vs Dissolved Oxygen": ("Weather Condition", "Dissolved Oxygen"),
             "Wind Direction vs Ammonia": ("Wind Direction", "Ammonia"),
             "Wind Direction vs Phosphate": ("Wind Direction", "Phosphate"),
             "Wind Direction vs Nitrate": ("Wind Direction", "Nitrate"),
