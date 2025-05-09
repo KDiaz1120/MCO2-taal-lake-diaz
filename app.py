@@ -545,65 +545,65 @@ with tab5:
             st.session_state.model_trained = True
             st.success("Model training completed!")
     
-if st.session_state.model_trained:
-        # Display results - larger and more organized
-        st.subheader("Model Performance Comparison")
-        
-        # Prepare data for bar chart
-        model_names = []
-        mae_scores = []
-        rmse_scores = []
-        
-        for name, res in st.session_state.results.items():
-            model_names.append(name)
-            mae_scores.append(res['mae'])
-            rmse_scores.append(res['rmse'])
-        
-        # Create interactive bar chart
-        fig = go.Figure()
-        
-        fig.add_trace(go.Bar(
-            x=model_names,
-            y=mae_scores,
-            name='MAE Score',
-            marker_color='#1f77b4',
-            text=[f"{score:.4f}" for score in mae_scores],
-            textposition='auto',
-            hoverinfo='y+name'
-        ))
-        
-        fig.add_trace(go.Bar(
-            x=model_names,
-            y=rmse_scores,
-            name='RMSE Score',
-            marker_color='#ff7f0e',
-            text=[f"{score:.4f}" for score in rmse_scores],
-            textposition='auto',
-            hoverinfo='y+name'
-        ))
-        
-        fig.update_layout(
-            title='Model Performance Metrics',
-            xaxis_title='Model Type',
-            yaxis_title='Score Value',
-            barmode='group',
-            hovermode="x unified",
-            template='plotly_white',
-            height=500,
-            margin=dict(l=50, r=50, t=80, b=50))
-        
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Metrics cards in columns (kept but simplified)
-        st.subheader("Detailed Metrics")
-        cols = st.columns(3)
-        for i, (name, res) in enumerate(st.session_state.results.items()):
-            with cols[i]:
-                st.metric(
-                    label=f"{name} Model",
-                    value=f"MAE: {res['mae']:.4f}",
-                    delta=f"RMSE: {res['rmse']:.4f}"
-                )
+    if st.session_state.model_trained:
+            # NEW: Interactive Model Performance Comparison
+            st.subheader("Model Performance Comparison")
+            
+            # Prepare data for bar chart
+            model_names = []
+            mae_scores = []
+            rmse_scores = []
+            
+            for name, res in st.session_state.results.items():
+                model_names.append(name)
+                mae_scores.append(res['mae'])
+                rmse_scores.append(res['rmse'])
+            
+            # Create interactive bar chart
+            fig = go.Figure()
+            
+            fig.add_trace(go.Bar(
+                x=model_names,
+                y=mae_scores,
+                name='MAE Score',
+                marker_color='#1f77b4',
+                text=[f"{score:.4f}" for score in mae_scores],
+                textposition='auto',
+                hoverinfo='y+name'
+            ))
+            
+            fig.add_trace(go.Bar(
+                x=model_names,
+                y=rmse_scores,
+                name='RMSE Score',
+                marker_color='#ff7f0e',
+                text=[f"{score:.4f}" for score in rmse_scores],
+                textposition='auto',
+                hoverinfo='y+name'
+            ))
+            
+            fig.update_layout(
+                title='Model Performance Metrics',
+                xaxis_title='Model Type',
+                yaxis_title='Score Value',
+                barmode='group',
+                hovermode="x unified",
+                template='plotly_white',
+                height=500,
+                margin=dict(l=50, r=50, t=80, b=50)
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Metrics cards in columns (kept but simplified)
+            st.subheader("Detailed Metrics")
+            cols = st.columns(3)
+            for i, (name, res) in enumerate(st.session_state.results.items()):
+                with cols[i]:
+                    st.metric(
+                        label=f"{name} Model",
+                        value=f"MAE: {res['mae']:.4f}",
+                        delta=f"RMSE: {res['rmse']:.4f}"
+                    )
         
         # Water Quality Assessment - larger
         st.subheader("Water Quality Index Assessment")
