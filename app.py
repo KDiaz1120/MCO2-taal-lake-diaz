@@ -388,49 +388,97 @@ with tab3:
 with tab4:
     st.header("Parameter Relationships", divider='blue')
     
-    # Create two tabs within this section
-    rel_tab1, rel_tab2 = st.tabs(["**Weather  Factors**", "**Volcanic Activity Indicators**"])
+    # Create three tabs within this section
+    rel_tab1, rel_tab2, rel_tab3 = st.tabs([
+        "**Weather Factors**", 
+        "**Volcanic Activity Indicators**",
+        "**Weather Metadata**"
+    ])
     
     with rel_tab1:
-        st.subheader("Weather Factors")
-        st.markdown("Explore relationships between Weather Factors indicators and other parameters")
+        # Your existing weather factors code remains unchanged
+        st.subheader("Weather Factor Relationships")
+        st.markdown("Explore how weather conditions affect water quality parameters")
         
-        # Define selectable relationships (your original code)
-        scatter_options = {
-            "Weather Condition vs Nitrate": ("Weather Condition", "Nitrate"),
-            "Weather Condition vs Ammonia": ("Weather Condition", "Ammonia"),
-            "Weather Condition vs Phosphate": ("Weather Condition", "Phosphate"),
-            "Weather Condition vs Dissolved Oxygen": ("Weather Condition", "Dissolved Oxygen"),
-            "Wind Direction vs Ammonia": ("Wind Direction", "Ammonia"),
-            "Wind Direction vs Phosphate": ("Wind Direction", "Phosphate"),
-            "Wind Direction vs Nitrate": ("Wind Direction", "Nitrate"),
-            "Wind Direction vs Dissolved Oxygen": ("Wind Direction", "Dissolved Oxygen"),
+        weather_options = {
+            "Weather Condition": "Weather Condition",
+            "Wind Direction": "Wind Direction",
+            "Air Temperature": "Air Temperature"
         }
-
-        # Select relationship - larger controls
-        selected_relation = st.selectbox(
-            "Select parameter relationship to plot:", 
-            list(scatter_options.keys())
-        )
-
-        x_col, y_col = scatter_options[selected_relation]
-
-        if x_col in df.columns and y_col in df.columns:
-            fig = px.scatter(
-                df,
-                x=x_col,
-                y=y_col,
-                color="Site",
-                title=f"{x_col} vs {y_col}",
-                labels={x_col: x_col, y_col: y_col},
-                template="plotly_white",
-                height=600
+        
+        # Water quality parameters to compare against
+        water_quality_params = [
+            'Surface temp', 'Middle temp', 'Bottom temp', 'Water Temperature',
+            'pH', 'Ammonia', 'Nitrate', 'Phosphate',
+            'Dissolved Oxygen', 'Sulfide', 'Carbon Dioxide'
+        ]
+        
+        # Create two columns for the selectors
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            weather_param = st.selectbox(
+                "Weather Parameter:",
+                options=list(weather_options.keys()),
+                key="weather_param"
             )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning(f"Cannot plot: {x_col} or {y_col} not found in dataset.")
+        
+        with col2:
+            water_param = st.selectbox(
+                "Water Quality Parameter:",
+                options=[p for p in water_quality_params if p in df.columns],
+                key="water_param"
+            )
+        
+        # Create box plot
+        if weather_param and water_param:
+            try:
+                # For categorical weather data (condition, wind direction), use box plot
+                if weather_options[weather_param] in ['Weather Condition', 'Wind Direction']:
+                    fig = px.box(
+                        df,
+                        x=weather_options[weather_param],
+                        y=water_param,
+                        color="Site",
+                        title=f"Distribution of {water_param} by {weather_param}",
+                        labels={
+                            weather_options[weather_param]: weather_param,
+                            water_param: water_param
+                        },
+                        template="plotly_white",
+                        height=600
+                    )
+                # For continuous weather data (temperature), use scatter plot
+                else:
+                    fig = px.scatter(
+                        df,
+                        x=weather_options[weather_param],
+                        y=water_param,
+                        color="Site",
+                        title=f"{weather_param} vs {water_param}",
+                        labels={
+                            weather_options[weather_param]: weather_param,
+                            water_param: water_param
+                        },
+                        template="plotly_white",
+                        height=600
+                    )
+                
+                # Add some customization for better visualization
+                fig.update_layout(
+                    boxmode='group' if weather_options[weather_param] in ['Weather Condition', 'Wind Direction'] else None,
+                    xaxis_title=weather_param,
+                    yaxis_title=water_param,
+                    showlegend=True
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
+            except Exception as e:
+                st.error(f"Error creating plot: {str(e)}")
     
     with rel_tab2:
+        # Your existing volcanic indicators code remains unchanged
         st.subheader("Volcanic Activity Indicators")
         st.markdown("Explore relationships between volcanic activity indicators and other parameters")
         
@@ -487,6 +535,44 @@ with tab4:
                 
             except Exception as e:
                 st.error(f"Error creating plot: {str(e)}")
+                
+    with rel_tab3:
+        st.subheader("Weather Condition & Wind Direction Codes")
+        st.markdown("Reference guide for understanding the numeric codes used in the dataset")
+        
+        # Create two columns for the metadata tables
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### Weather Condition Codes")
+            weather_metadata = {
+                "Code": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+                "Description": [
+                    "Unknown", "Sunny", "Sunny to Cloudy", "Partly Cloudy", 
+                    "Cloudy", "Cloudy to Sunny", "Rainy", "Hazy", 
+                    "Calm", "Heavy Rain", "Fair", "Cold"
+                ]
+            }
+            st.table(pd.DataFrame(weather_metadata))
+        
+        with col2:
+            st.markdown("### Wind Direction Codes")
+            wind_metadata = {
+                "Code": [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14],
+                "Description": [
+                    "Unknown", "Calm", "North East", "South East", 
+                    "South West", "ENE", "East", "ESE", 
+                    "WSW", "WNW", "NNW", "North", 
+                    "West", "North West"
+                ]
+            }
+            st.table(pd.DataFrame(wind_metadata))
+        
+        st.markdown("""
+        **Note:** 
+        - These codes are used in the dataset to represent weather conditions and wind directions.
+        - When analyzing data, refer to these tables to interpret the numeric values.
+        """)
 
 with tab5:
     st.header("AI-Powered Predictions", divider='blue')
