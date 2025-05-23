@@ -577,42 +577,84 @@ with tab4:
 with tab5:
     st.header("AI-Powered Predictions", divider='blue')
     
-    # Model configuration - larger controls
+    # Model configuration
     with st.expander("⚙️ MODEL CONFIGURATION", expanded=True):
         col1, col2 = st.columns(2)
         with col1:
+            # Algorithm selection
+            model_type = st.selectbox(
+                "Select Algorithm:",
+                options=['CNN', 'LSTM', 'Hybrid CNN-LSTM'],
+                index=1
+            )
+            
             target = st.selectbox(
                 "Target Parameter:",
                 options=numerical_cols,
                 index=numerical_cols.index('pH')
             )
-            n_steps = st.slider(
-                "Sequence Length:",
-                min_value=1,
-                max_value=10,
-                value=3
+            
+            # Location selection
+            locations = ['All Locations'] + sorted(df['Site'].unique().tolist())
+            location = st.selectbox(
+                "Select Location:",
+                options=locations,
+                index=0
             )
+            
         with col2:
-            epochs = st.slider(
-                "Training Epochs:",
-                min_value=10,
-                max_value=200,
-                value=50,
-                help="Number of training iterations"
+            # Horizon selection
+            horizon = st.selectbox(
+                "Prediction Horizon:",
+                options=['Daily', 'Weekly', 'Monthly', 'Yearly'],
+                index=1
             )
-            batch_size = st.slider(
-                "Batch Size:",
-                min_value=16,
-                max_value=128,
-                value=32
-            )
+            
+            # Dynamic sequence length based on horizon
+            if horizon == 'Daily':
+                n_steps = st.slider(
+                    "Sequence Length (Days):",
+                    min_value=1,
+                    max_value=14,
+                    value=7,
+                    help="Number of previous days to use for prediction"
+                )
+            elif horizon == 'Weekly':
+                n_steps = st.slider(
+                    "Sequence Length (Weeks):",
+                    min_value=1,
+                    max_value=8,
+                    value=4,
+                    help="Number of previous weeks to use for prediction"
+                )
+            elif horizon == 'Monthly':
+                n_steps = st.slider(
+                    "Sequence Length (Months):",
+                    min_value=1,
+                    max_value=12,
+                    value=6,
+                    help="Number of previous months to use for prediction"
+                )
+            else:  # Yearly
+                n_steps = st.slider(
+                    "Sequence Length (Years):",
+                    min_value=1,
+                    max_value=5,
+                    value=3,
+                    help="Number of previous years to use for prediction"
+                )
     
-    # Larger training button
-    if st.button("🚀 TRAIN PREDICTION MODELS", type="primary", use_container_width=True):
-        with st.spinner("Training models... This may take a few minutes"):
+    # Training button
+    if st.button("🚀 TRAIN PREDICTION MODEL", type="primary", use_container_width=True):
+        with st.spinner("Training model... This may take a few minutes"):
             # Prepare data
+            if location == 'All Locations':
+                data = df.groupby('Date')[numerical_cols].mean().reset_index()
+            else:
+                data = df[df['Site'] == location]
+            
             target_idx = numerical_cols.index(target)
-            data_array = df[numerical_cols].values
+            data_array = data[numerical_cols].values
             
             def create_sequences(data, target_idx, n_steps=3):
                 X, y = [], []
@@ -664,96 +706,278 @@ with tab5:
                 ])
                 model.compile(optimizer='adam', loss='mae')
                 return model
-                
-            # Train models
-            models = {
-                'CNN': create_cnn_model(),
-                'LSTM': create_lstm_model(),
-                'Hybrid CNN-LSTM': create_hybrid_model()
+            
+            # Create selected model
+            model_creators = {
+                'CNN': create_cnn_model,
+                'LSTM': create_lstm_model,
+                'Hybrid CNN-LSTM': create_hybrid_model
             }
             
-            results = {}
-            for name, model in models.items():
-                history = model.fit(
-                    X_train, y_train,
-                    epochs=epochs,
-                    batch_size=batch_size,
-                    validation_data=(X_test, y_test),
-                    verbose=0
-                )
+            model = model_creators[model_type]()
+            
+            # Fixed training parameters
+            epochs = 50
+            batch_size = 32
+            
+            history = model.fit(
+                X_train, y_train,
+                epochs=epochs,
+                batch_size=batch_size,
+                validation_data=(X_test, y_test),
+                verbose=0
+            )
+            
+            y_pred = model.predict(X_test).flatten()
+            
+            # Calculate metrics
+            mae = mean_absolute_error(y_test, y_pred)
+            rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+            r2 = r2_score(y_test, y_pred)
+            
+            # Generate forecast
+            steps = 10  # Predict 10 steps ahead
+            current_seq = X[-1].flatten().reshape(1, X_train.shape[1], X_train.shape[2])
+            predictions = []
+            
+            for _ in range(steps):
+                pred = model.predict(current_seq)[0, 0]
+                predictions.append(pred)
+                # Update sequence with prediction
+                new_seq = np.append(current_seq[:, 1:, :], 
+                                  np.array([current_seq[:, -1, :]]), axis=1)
+                new_seq[0, -1, target_idx] = pred
+                current_seq = new_seq
+            
+            # Generate dates based on horizon
+            last_date = data['Date'].max()
+            date_generator = {
+                'Daily': lambda x: last_date + pd.DateOffset(days=x+1),
+                'Weekly': lambda x: last_date + pd.DateOffset(weeks=x+1),
+                'Monthly': lambda x: last_date + pd.DateOffset(months=x+1),
+                'Yearly': lambda x: last_date + pd.DateOffset(years=x+1)
+            }[horizon]
+            future_dates = [date_generator(i) for i in range(steps)]
+            
+            # Calculate WQI and violations with error handling
+            def calculate_wqi(preds, feature_names, sequences):
+                try:
+                    # Check if required features are present
+                    required_features = ['pH', 'Dissolved Oxygen', 'Ammonia', 'Phosphate']
+                    if not all(feat in feature_names for feat in required_features):
+                        st.warning("WQI calculation requires pH, Dissolved Oxygen, Ammonia, and Phosphate parameters")
+                        return np.array([]), []
+                    
+                    denorm = sequences.copy()
+                    for i,p in enumerate(preds): 
+                        denorm[i,-1,feature_names.index(target)] = p
+                    wqi, violations = [], []
+                    
+                    for seq in denorm:
+                        val = seq[-1]
+                        score = 100
+                        vio = []
+                        
+                        # pH scoring (ideal 6.5-8.5)
+                        if 'pH' in feature_names:
+                            pH_idx = feature_names.index('pH')
+                            pH_val = val[pH_idx] * 14
+                            if not 6.5 <= pH_val <= 8.5:
+                                score -= 25
+                                vio.append('pH')
+                        
+                        # Dissolved Oxygen scoring (ideal >5 mg/L)
+                        if 'Dissolved Oxygen' in feature_names:
+                            do_idx = feature_names.index('Dissolved Oxygen')
+                            do_val = val[do_idx] * 20
+                            if do_val < 5:
+                                score -= 20
+                                vio.append('Low Oxygen')
+                        
+                        # Ammonia scoring (ideal <1 mg/L)
+                        if 'Ammonia' in feature_names:
+                            ammonia_idx = feature_names.index('Ammonia')
+                            ammonia_val = val[ammonia_idx] * 10
+                            if ammonia_val > 1:
+                                score -= 15
+                                vio.append('High Ammonia')
+                        
+                        # Phosphate scoring (ideal <0.4 mg/L)
+                        if 'Phosphate' in feature_names:
+                            phosphate_idx = feature_names.index('Phosphate')
+                            phosphate_val = val[phosphate_idx] * 5
+                            if phosphate_val > 0.4:
+                                score -= 10
+                                vio.append('High Phosphate')
+                        
+                        wqi.append(max(score, 0))
+                        violations.append(vio)
+                    
+                    return np.array(wqi), violations
                 
-                y_pred = model.predict(X_test).flatten()
-                
-                results[name] = {
-                    'model': model,
-                    'mae': mean_absolute_error(y_test, y_pred),
-                    'rmse': np.sqrt(mean_squared_error(y_test, y_pred)),
-                    'history': history
+                except Exception as e:
+                    st.warning(f"Error calculating WQI: {str(e)}")
+                    return np.array([]), []
+            
+            try:
+                wqi_vals, vio_list = calculate_wqi(y_pred, numerical_cols, X_test)
+                wqi_data = {
+                    'values': wqi_vals,
+                    'violations': vio_list
+                }
+            except Exception as e:
+                st.warning(f"Could not calculate WQI: {str(e)}")
+                wqi_data = {
+                    'values': [],
+                    'violations': []
                 }
             
-            st.session_state.results = results
-            st.session_state.model_trained = True
+            st.session_state.model_results = {
+                'model_type': model_type,
+                'metrics': {
+                    'MAE': mae,
+                    'RMSE': rmse,
+                    'R2': r2
+                },
+                'history': history,
+                'forecast': {
+                    'dates': future_dates,
+                    'values': predictions,
+                    'parameter': target,
+                    'horizon': horizon,
+                    'location': location
+                },
+                'test_predictions': {
+                    'actual': y_test,
+                    'predicted': y_pred
+                },
+                'wqi': wqi_data
+            }
             st.success("Model training completed!")
     
-    if st.session_state.model_trained:
-        # Display results - larger and more organized
-        st.subheader("Model Performance Comparison")
+    if 'model_results' in st.session_state:
+        results = st.session_state.model_results
         
-        # Prepare data for bar chart
-        model_names = []
-        mae_scores = []
-        rmse_scores = []
+        # Model Performance Section
+        st.subheader("Model Performance")
         
-        for name, res in st.session_state.results.items():
-            model_names.append(name)
-            mae_scores.append(res['mae'])
-            rmse_scores.append(res['rmse'])
+        # Metrics cards
+        cols = st.columns(3)
+        with cols[0]:
+            st.metric("Model Type", results['model_type'])
+        with cols[1]:
+            st.metric("MAE", f"{results['metrics']['MAE']:.4f}")
+        with cols[2]:
+            st.metric("RMSE", f"{results['metrics']['RMSE']:.4f}")
         
-        # Create interactive bar chart
+        # Bar chart for MAE and RMSE
+        st.markdown("### Performance Metrics Comparison")
+        metrics_df = pd.DataFrame({
+            'Metric': ['MAE', 'RMSE'],
+            'Value': [results['metrics']['MAE'], results['metrics']['RMSE']]
+        })
+        
+        fig = px.bar(
+            metrics_df,
+            x='Metric',
+            y='Value',
+            color='Metric',
+            color_discrete_map={'MAE': '#636EFA', 'RMSE': '#EF553B'},
+            text_auto='.4f',
+            height=400
+        )
+        fig.update_layout(
+            title=f"{results['model_type']} Model Performance",
+            xaxis_title="Metric",
+            yaxis_title="Value",
+            showlegend=False
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Training curve
+        st.subheader("Training Progress")
         fig = go.Figure()
-        
-        fig.add_trace(go.Bar(
-            x=model_names,
-            y=mae_scores,
-            name='MAE Score',
-            marker_color='#1f77b4',
-            text=[f"{score:.4f}" for score in mae_scores],
-            textposition='auto',
-            hoverinfo='y+name'
+        fig.add_trace(go.Scatter(
+            x=list(range(len(results['history'].history['loss']))),
+            y=results['history'].history['loss'],
+            name='Training Loss',
+            line=dict(width=3)
         ))
-        
-        fig.add_trace(go.Bar(
-            x=model_names,
-            y=rmse_scores,
-            name='RMSE Score',
-            marker_color='#ff7f0e',
-            text=[f"{score:.4f}" for score in rmse_scores],
-            textposition='auto',
-            hoverinfo='y+name'
+        fig.add_trace(go.Scatter(
+            x=list(range(len(results['history'].history['val_loss']))),
+            y=results['history'].history['val_loss'],
+            name='Validation Loss',
+            line=dict(width=3, dash='dash')
         ))
         
         fig.update_layout(
-            title='Model Performance Metrics',
-            xaxis_title='Model Type',
-            yaxis_title='Score Value',
-            barmode='group',
+            title="Training and Validation Loss",
+            xaxis_title="Epoch",
+            yaxis_title="Loss (MAE)",
             hovermode="x unified",
             template='plotly_white',
-            height=500,
-            margin=dict(l=50, r=50, t=80, b=50))
-        
+            height=500
+        )
         st.plotly_chart(fig, use_container_width=True)
         
-        # Metrics cards in columns (kept but simplified)
-        st.subheader("Detailed Metrics")
-        cols = st.columns(3)
-        for i, (name, res) in enumerate(st.session_state.results.items()):
-            with cols[i]:
-                st.metric(
-                    label=f"{name} Model",
-                    value=f"MAE: {res['mae']:.4f}",
-                    delta=f"RMSE: {res['rmse']:.4f}"
-                )
+        # Forecast visualization
+        st.subheader(f"{results['forecast']['horizon']} Forecast")
+        fig = go.Figure()
+        
+        # Forecast data
+        fig.add_trace(go.Scatter(
+            x=results['forecast']['dates'],
+            y=results['forecast']['values'],
+            name='Forecast',
+            line=dict(color='red', dash='dash'),
+            mode='lines+markers'
+        ))
+        
+        fig.update_layout(
+            title=f"{results['forecast']['horizon']} Forecast for {results['forecast']['parameter']}",
+            xaxis_title='Date',
+            yaxis_title=results['forecast']['parameter'],
+            height=400
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Forecast table
+        st.markdown(f"### {results['forecast']['horizon']} Forecast (Next 10 Periods)")
+        forecast_df = pd.DataFrame({
+            'Date': results['forecast']['dates'],
+            'Predicted Value': results['forecast']['values']
+        })
+        
+        st.dataframe(forecast_df.style.format({
+            'Date': lambda x: x.strftime('%Y-%m-%d'),
+            'Predicted Value': "{:.4f}"
+        }), use_container_width=True)
+        
+        # Actual vs Predicted
+        st.subheader("📌 Actual vs Predicted Values")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=results['test_predictions']['actual'],
+            y=results['test_predictions']['predicted'],
+            mode='markers',
+            marker=dict(color='skyblue', size=8, opacity=0.6),
+            name='Predicted vs Actual'
+        ))
+        fig.add_trace(go.Scatter(
+            x=results['test_predictions']['actual'],
+            y=results['test_predictions']['actual'],
+            mode='lines',
+            line=dict(color='gray', dash='dash'),
+            name='Ideal Line (y=x)'
+        ))
+        fig.update_layout(
+            title=f"{results['model_type']}: Actual vs Predicted ({target})",
+            xaxis_title="Actual",
+            yaxis_title="Predicted",
+            height=500,
+            template="plotly_white"
+        )
+        st.plotly_chart(fig, use_container_width=True)
         
         # Water Quality Assessment - larger
         st.subheader("Water Quality Index Assessment")
@@ -816,40 +1040,7 @@ with tab5:
                     count/len(wqi_vals),
                     text=f"{cat}: {count} samples ({count/len(wqi_vals):.1%})"
                 )
-                
-        st.subheader("📌 Actual vs Predicted Values")
-        scatter_cols = st.columns(3)
-        for i, (name, res) in enumerate(st.session_state.results.items()):
-            model = res['model']
-            y_pred = model.predict(X_test).flatten()
-          
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=y_test,
-                y=y_pred,
-                mode='markers',
-                marker=dict(color='skyblue', size=8, opacity=0.6),
-                name='Predicted vs Actual'
-            ))
-            fig.add_trace(go.Scatter(
-                x=y_test,
-                y=y_test,
-                mode='lines',
-                line=dict(color='gray', dash='dash'),
-                name='Ideal Line (y=x)'
-            ))
-            fig.update_layout(
-                title=f"{name}: Actual vs Predicted ({target})",
-                xaxis_title="Actual",
-                yaxis_title="Predicted",
-                width=450,
-                height=450,
-                margin=dict(l=20, r=20, t=60, b=20),
-                template="plotly_white"
-            )
-            with scatter_cols[i]:
-                st.plotly_chart(fig, use_container_width=True)
-          
+            
         # Recommendations - larger
         st.subheader("Recommendations")
         
