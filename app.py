@@ -762,59 +762,80 @@ with tab5:
             # Calculate WQI and violations with error handling
             def calculate_wqi(preds, feature_names, sequences):
                 try:
-                    # Check if required features are present
                     required_features = ['pH', 'Dissolved Oxygen', 'Ammonia', 'Phosphate']
                     if not all(feat in feature_names for feat in required_features):
                         st.warning("WQI calculation requires pH, Dissolved Oxygen, Ammonia, and Phosphate parameters")
                         return np.array([]), []
                     
-                    denorm = sequences.copy()
-                    for i,p in enumerate(preds): 
-                        denorm[i,-1,feature_names.index(target)] = p
                     wqi, violations = [], []
                     
-                    for seq in denorm:
-                        val = seq[-1]
+                    for i in range(len(preds)):
                         score = 100
                         vio = []
+                        seq = sequences[i][-1]  # Get last sequence values
                         
-                        # pH scoring (ideal 6.5-8.5)
+                        # pH scoring (6.5-8.5 is ideal)
                         if 'pH' in feature_names:
                             pH_idx = feature_names.index('pH')
-                            pH_val = val[pH_idx] * 14
-                            if not 6.5 <= pH_val <= 8.5:
+                            pH_val = seq[pH_idx]
+                            # More nuanced pH scoring
+                            if pH_val < 4 or pH_val > 10:  # Extremely poor
+                                score -= 40
+                                vio.append('pH')
+                            elif pH_val < 6 or pH_val > 9:  # Poor
                                 score -= 25
                                 vio.append('pH')
-                        
-                        # Dissolved Oxygen scoring (ideal >5 mg/L)
+                            elif not 6.5 <= pH_val <= 8.5:  # Fair
+                                score -= 10
+                                
+                        # Dissolved Oxygen scoring (>5 mg/L is ideal)
                         if 'Dissolved Oxygen' in feature_names:
                             do_idx = feature_names.index('Dissolved Oxygen')
-                            do_val = val[do_idx] * 20
-                            if do_val < 5:
+                            do_val = seq[do_idx]
+                            if do_val < 2:  # Extremely poor
+                                score -= 40
+                                vio.append('Low Oxygen')
+                            elif do_val < 5:  # Poor
                                 score -= 20
                                 vio.append('Low Oxygen')
-                        
-                        # Ammonia scoring (ideal <1 mg/L)
+                            elif do_val < 7:  # Fair
+                                score -= 5
+                                
+                        # Ammonia scoring (<1 mg/L is ideal)
                         if 'Ammonia' in feature_names:
                             ammonia_idx = feature_names.index('Ammonia')
-                            ammonia_val = val[ammonia_idx] * 10
-                            if ammonia_val > 1:
-                                score -= 15
+                            ammonia_val = seq[ammonia_idx]
+                            if ammonia_val > 5:  # Extremely poor
+                                score -= 40
                                 vio.append('High Ammonia')
-                        
-                        # Phosphate scoring (ideal <0.4 mg/L)
+                            elif ammonia_val > 1:  # Poor
+                                score -= 20
+                                vio.append('High Ammonia')
+                            elif ammonia_val > 0.5:  # Fair
+                                score -= 5
+                                
+                        # Phosphate scoring (<0.4 mg/L is ideal)
                         if 'Phosphate' in feature_names:
                             phosphate_idx = feature_names.index('Phosphate')
-                            phosphate_val = val[phosphate_idx] * 5
-                            if phosphate_val > 0.4:
-                                score -= 10
+                            phosphate_val = seq[phosphate_idx]
+                            if phosphate_val > 2:  # Extremely poor
+                                score -= 40
                                 vio.append('High Phosphate')
+                            elif phosphate_val > 0.4:  # Poor
+                                score -= 20
+                                vio.append('High Phosphate')
+                            elif phosphate_val > 0.2:  # Fair
+                                score -= 5
                         
-                        wqi.append(max(score, 0))
+                        wqi.append(max(score, 0))  # Ensure score doesn't go below 0
                         violations.append(vio)
                     
                     return np.array(wqi), violations
                 
+                except Exception as e:
+                    st.warning(f"Error calculating WQI: {str(e)}")
+                    return np.array([]), []
+                                    
                 except Exception as e:
                     st.warning(f"Error calculating WQI: {str(e)}")
                     return np.array([]), []
@@ -862,19 +883,21 @@ with tab5:
         st.subheader("Model Performance")
         
         # Metrics cards
-        cols = st.columns(3)
+        cols = st.columns(4)
         with cols[0]:
             st.metric("Model Type", results['model_type'])
         with cols[1]:
             st.metric("MAE", f"{results['metrics']['MAE']:.4f}")
         with cols[2]:
             st.metric("RMSE", f"{results['metrics']['RMSE']:.4f}")
+        with cols[3]:
+            st.metric("R² Score", f"{results['metrics']['R2']:.4f}")
         
         # Bar chart for MAE and RMSE
         st.markdown("### Performance Metrics Comparison")
         metrics_df = pd.DataFrame({
-            'Metric': ['MAE', 'RMSE'],
-            'Value': [results['metrics']['MAE'], results['metrics']['RMSE']]
+            'Metric': ['MAE', 'RMSE', 'R²'],
+            'Value': [results['metrics']['MAE'], results['metrics']['RMSE'], results['metrics']['R2']]
         })
         
         fig = px.bar(
@@ -882,7 +905,7 @@ with tab5:
             x='Metric',
             y='Value',
             color='Metric',
-            color_discrete_map={'MAE': '#636EFA', 'RMSE': '#EF553B'},
+            color_discrete_map={'MAE': '#636EFA', 'RMSE': '#EF553B', 'R²': '#00CC96'},
             text_auto='.4f',
             height=400
         )
@@ -982,89 +1005,84 @@ with tab5:
         # Water Quality Assessment - larger
         st.subheader("Water Quality Index Assessment")
         
-        # Use LSTM model for predictions
-        y_pred_lstm = st.session_state.results['LSTM']['model'].predict(X_test).flatten()
-        
-        def calculate_wqi(preds, feature_names, sequences):
-            denorm = scaler.inverse_transform(sequences.reshape(-1,len(feature_names))).reshape(sequences.shape)
-            for i,p in enumerate(preds): 
-                denorm[i,-1,feature_names.index(target)] = p*(scaler.data_max_[feature_names.index(target)]-scaler.data_min_[feature_names.index(target)])+scaler.data_min_[feature_names.index(target)]
-            wqi, violations = [], []
-            for seq in denorm:
-                val = seq[-1]
-                score=100; vio=[]
-                if not 6.5<=val[feature_names.index('pH')]<=8.5: score-=25; vio.append('pH')
-                if val[feature_names.index('Dissolved Oxygen')]<5: score-=20; vio.append('Low Oxygen')
-                if val[feature_names.index('Ammonia')]>1: score-=15; vio.append('High Ammonia')
-                if val[feature_names.index('Phosphate')]>0.4: score-=10; vio.append('High Phosphate')
-                wqi.append(max(score,0)); violations.append(vio)
-            return np.array(wqi), violations
-        
-        wqi_vals, vio_list = calculate_wqi(
-            y_pred_lstm,
-            numerical_cols,
-            X_test
-        )
-        
-        # WQI Distribution - larger
-        wqi_bins = {
-            'Excellent (90-100)': (90, 100),
-            'Good (70-89)': (70, 89),
-            'Fair (50-69)': (50, 69),
-            'Poor (<50)': (0, 49)
-        }
-        
-        wqi_counts = {cat: 0 for cat in wqi_bins}
-        for val in wqi_vals:
-            for cat, (low, high) in wqi_bins.items():
-                if low <= val <= high:
-                    wqi_counts[cat] += 1
-                    break
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            fig = px.pie(
-                names=list(wqi_counts.keys()),
-                values=list(wqi_counts.values()),
-                title="WQI Distribution",
-                hole=0.4,
-                color_discrete_sequence=px.colors.sequential.Blues_r,
-                height=400
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            st.markdown("#### Water Quality Categories")
-            for cat, count in wqi_counts.items():
-                st.progress(
-                    count/len(wqi_vals),
-                    text=f"{cat}: {count} samples ({count/len(wqi_vals):.1%})"
-                )
+        if len(results['wqi']['values']) > 0:
+            # WQI Distribution - larger
+            wqi_bins = {
+                'Excellent (90-100)': (90, 100),
+                'Good (70-89)': (70, 89),
+                'Fair (50-69)': (50, 69),
+                'Poor (<50)': (0, 49)
+            }
             
-        # Recommendations - larger
-        st.subheader("Recommendations")
-        
-        mapping = {
-            'pH': 'Adjust pH levels through aeration or chemical treatment',
-            'Low Oxygen': 'Increase oxygenation through waterfall aeration or surface agitators',
-            'High Ammonia': 'Implement biological filtration or water exchange',
-            'High Phosphate': 'Use phosphate-removing media or limit nutrient runoff'
-        }
-        
-        bad_vios = {
-            v
-            for val, vlist in zip(wqi_vals, vio_list)
-            if val < 70
-            for v in vlist
-        }
-        
-        if bad_vios:
-            st.warning("⚠️ Water quality issues detected:")
-            for v in sorted(bad_vios):
-                with st.expander(f"**{v}** - Recommended Action", expanded=True):
-                    st.info(mapping[v], icon="ℹ️")
+            wqi_counts = {cat: 0 for cat in wqi_bins}
+            for val in results['wqi']['values']:
+                for cat, (low, high) in wqi_bins.items():
+                    if low <= val <= high:
+                        wqi_counts[cat] += 1
+                        break
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                fig = px.pie(
+                    names=list(wqi_counts.keys()),
+                    values=list(wqi_counts.values()),
+                    title="WQI Distribution",
+                    hole=0.4,
+                    color_discrete_sequence=px.colors.sequential.Blues_r,
+                    height=400
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                st.markdown("#### Water Quality Categories")
+                for cat, count in wqi_counts.items():
+                    st.progress(
+                        count/len(results['wqi']['values']),
+                        text=f"{cat}: {count} samples ({count/len(results['wqi']['values']):.1%})"
+                    )
+                
+            # Enhanced recommendations
+            st.subheader("Recommendations")
+            
+            # More detailed recommendations mapping
+            recommendation_map = {
+                'pH': [
+                    ("Critical (pH <4 or >10)", "Immediate chemical adjustment required"),
+                    ("Poor (pH <6 or >9)", "Add pH buffers or aeration"),
+                    ("Fair (outside 6.5-8.5)", "Monitor and consider gradual adjustment")
+                ],
+                'Low Oxygen': [
+                    ("Critical (<2 mg/L)", "Emergency aeration needed"),
+                    ("Poor (<5 mg/L)", "Increase water movement and aeration"),
+                    ("Fair (<7 mg/L)", "Monitor and consider aeration")
+                ],
+                'High Ammonia': [
+                    ("Critical (>5 mg/L)", "Immediate water change required"),
+                    ("Poor (>1 mg/L)", "Increase biofiltration and reduce feeding"),
+                    ("Fair (>0.5 mg/L)", "Monitor and optimize filtration")
+                ],
+                'High Phosphate': [
+                    ("Critical (>2 mg/L)", "Chemical phosphate removal needed"),
+                    ("Poor (>0.4 mg/L)", "Use phosphate removers and reduce nutrients"),
+                    ("Fair (>0.2 mg/L)", "Monitor and adjust feeding practices")
+                ]
+            }
+            
+            # Get unique violations
+            all_vios = set()
+            for vlist in results['wqi']['violations']:
+                all_vios.update(vlist)
+            
+            if all_vios:
+                st.warning("⚠️ Water quality issues detected:")
+                for violation in sorted(all_vios):
+                    with st.expander(f"**{violation}** - Recommended Actions", expanded=True):
+                        for level, action in recommendation_map.get(violation, []):
+                            st.info(f"• {level}: {action}")
+            else:
+                st.success("✅ No significant water quality issues detected", icon="✅")
         else:
-            st.success("✅ No significant water quality issues detected", icon="✅")
+            st.warning("Could not calculate WQI - required parameters not available")
             
 with tab6:
     st.header("Engineering Development Team", divider='blue')
